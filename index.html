@@ -7440,5 +7440,53 @@ safe("ouverture",()=>{const el=$("intro");if(!el)return;
 /* Installation hors connexion */
 if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
 
+
+/* ================= Répartition équilibrée du volume de la semaine =================
+   - la séance de D+ sur tapis devient une vraie séance (échauffement + blocs + retour au calme),
+     et tous ses kilomètres (échauffement compris) comptent dans la semaine ;
+   - le reste du volume est réparti de façon homogène entre footings et sortie longue. */
+function rbTapis(d,w,wi){
+  const m=d.txt.match(/^Tapis : (\d+)×(\d+)' à (\d+) %(.*)$/);if(!m||/léger/.test(d.txt))return null;
+  const pct=+m[3],rest=m[4]||"",sp=5.5,climbM=sp*1000/60*pct/100;// m de D+ par minute de montée
+  // objectif de D+ : au moins 40 % du D+ de la semaine, avec un plancher qui monte doucement
+  const road=w.goal&&(+w.goal.dp||0)/Math.max(1,+w.goal.km||1)<10;
+  const floor=road?0:Math.min(500,240+wi*12),want=road?0:Math.max(floor,(w.pd||0)*0.4);
+  let T=Math.max(road?0:20,+m[1]*+m[2],Math.min(54,want/climbM));T=Math.min(60,T);
+  const b=T>=40?10:T>=24?8:6,n=Math.max(3,Math.min(6,Math.round(T/b)));T=n*b;
+  const stepD=/stepper/.test(rest)?60:0;
+  const dp=Math.round(T*climbM)+stepD;
+  // 10' échauffement (≈1,2 km) + blocs + 2' de récup à plat entre les blocs + 10' retour au calme (≈1,1 km)
+  const km=1.2+T/60*sp+(n-1)*2/60*5+1.1;
+  return {...d,txt:"Tapis : "+n+"×"+b+"' à "+pct+" %"+rest,km,dp}}
+function rbScale(d,k){if(!d.km)return d;const f=k/d.km,mm=d.txt.match(/(?<![×\d])(\d+)h(\d{2})?|(?<![×\d])(\d+)'/);let txt=d.txt;
+  if(mm){const old=mm[3]?+mm[3]:(+mm[1])*60+(+mm[2]||0);txt=d.txt.replace(mm[0],dur(Math.max(25,old*f)))}
+  return {...d,km:k,dp:Math.round((d.dp||0)*f),txt}}
+function rbWeek(w,wi){
+  const D=w.days;if(!D||D.some(d=>d.race||d.recup||d.kind==="off"||d.kind==="race"))return;
+  if((w.notes||[]).some(n=>/sortie test/i.test(n))||w.phase==="Affûtage"||w.phase==="Course")return;
+  const L=D.findIndex(d=>d.slot==="long"&&d.kind==="long");
+  const F=D.map((d,j)=>j).filter(j=>(D[j].slot==="run"||D[j].slot==="run2")&&D[j].kind==="run"&&D[j].km>0&&/^Footing/.test(D[j].txt)&&!/activation|reprise/i.test(D[j].txt));
+  const H=D.findIndex(d=>d.slot==="hill");
+  const tot=[L,...F,H].filter(j=>j>=0).reduce((a,j)=>a+(D[j].km||0),0);
+  let hk=0,hk0=H>=0?D[H].km||0:0;
+  if(H>=0){const t=/^Tapis/.test(D[H].txt)?rbTapis(D[H],w,wi):null;if(t)D[H]=t;hk=D[H].km||0}
+  const sum=()=>{w.pk=D.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:d.km),0);w.pd=D.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:d.dp),0)};
+  if(L<0||!F.length){if(L>=0&&hk>hk0){const ld=D[L].dp;D[L]=rbScale(D[L],Math.max(8,D[L].km-(hk-hk0)));D[L].dp=ld}sum();return}
+  const R=Math.max(0,tot-hk);
+  const wt=j=>D[j].slot==="run2"?(/récup/i.test(D[j].txt)?0.7:0.85):1;
+  const sw=1.6+F.reduce((a,j)=>a+wt(j),0);
+  let kl=R*1.6/sw,over=0;const kf={};
+  F.forEach(j=>{let k=R*wt(j)/sw;const cap=D[j].slot==="run2"?14:13;if(k>cap){over+=k-cap;k=cap}if(k<6){over-=6-k;k=6}kf[j]=k});
+  kl=Math.max(0,kl+over);
+  const mx=Math.max(...Object.values(kf));if(kl<mx*1.3){const need=mx*1.3-kl;F.forEach(j=>kf[j]-=need*kf[j]/Object.values(kf).reduce((a,b)=>a+b,0));kl=mx*1.3}
+  const lk=D[L].km||kl,ld=D[L].dp||0;
+  D[L]=rbScale(D[L],kl);
+  // le D+ de la sortie longue ne baisse pas : c'est la séance trail de la semaine
+  D[L].dp=Math.max(D[L].dp,Math.round(ld*Math.min(1,kl/lk+0.15)),/trail/i.test(D[L].txt)?Math.round(kl*12):0);
+  F.forEach(j=>{D[j]=rbScale(D[j],kf[j])});
+  sum()}
+{const _gp=generatePlan;generatePlan=function(st,t){const P=_gp(st,t);try{(P.weeks||[]).forEach((w,i)=>rbWeek(w,i))}catch(e){console.error("répartition",e)}return P}}
+safe("répartition",()=>{if(typeof PLAN==="undefined"||!PLAN)return;PLAN=null;regen();renderAll()});
+
 </script>
 </body></html>
