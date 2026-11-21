@@ -1951,6 +1951,40 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .pk-go{margin-top:14px;width:100%;padding:12px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:700 15px var(--body,system-ui)}
 .pk-hint{margin:12px 0 0;font-size:12px;color:#fff;opacity:.8;text-shadow:0 1px 4px rgba(0,0,0,.4)}
 :root[data-dark] .pk-go{background:#E6FF00;color:#0B0B0C}
+/* ================= Barre d'onglets « liquid glass » ================= */
+#nbar.lg{height:auto;left:0;right:0;bottom:calc(10px + env(safe-area-inset-bottom));padding:0 14px}
+#nbar.lg .nb-bg,#nbar.lg .nb-bub{display:none!important}
+#nbar.lg .nb-row{height:auto;display:flex;align-items:center;gap:10px}
+#nbar.lg .lg-bar,#nbar.lg .lg-plus{position:relative;height:58px;border-radius:29px;isolation:isolate;
+  background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.38));
+  -webkit-backdrop-filter:blur(22px) saturate(1.9) brightness(1.04);backdrop-filter:blur(22px) saturate(1.9) brightness(1.04);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 1px rgba(255,255,255,.35),inset 0 0 0 .5px rgba(255,255,255,.6),0 10px 30px -8px rgba(15,20,40,.28),0 2px 6px rgba(15,20,40,.08);
+  transition:transform .35s cubic-bezier(.3,1.5,.5,1)}
+#nbar.lg .lg-bar{flex:1;display:flex;padding:5px}
+#nbar.lg .lg-plus{width:58px;flex:none;display:grid;place-items:center}
+/* reflet spéculaire du verre */
+#nbar.lg .lg-bar::before,#nbar.lg .lg-plus::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1;
+  background:radial-gradient(120% 70% at 30% -10%,rgba(255,255,255,.75),transparent 55%),radial-gradient(90% 60% at 80% 120%,rgba(255,255,255,.25),transparent 60%)}
+#nbar.lg .lg-bar.press{transform:scale(1.025)}
+#nbar.lg .lg-plus:active{transform:scale(1.08)}
+#nbar.lg .lg-lens{position:absolute;left:0;top:5px;bottom:5px;border-radius:24px;z-index:0;will-change:transform;transition:opacity .2s;
+  background:linear-gradient(180deg,rgba(0,0,0,.075),rgba(0,0,0,.045));box-shadow:inset 0 1px 1px rgba(255,255,255,.7),inset 0 -1px 2px rgba(0,0,0,.05)}
+#nbar.lg .lg-bar.press .lg-lens{background:linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.06))}
+#nbar.lg .nb-it{position:relative;z-index:1;flex:1;height:48px;color:#1B1D22;border-radius:26px}
+#nbar.lg .lg-plus .nb-it{flex:none;width:58px;height:58px;border-radius:50%}
+#nbar.lg .nb-it svg{width:24px;height:24px;stroke-width:1.8;opacity:1!important;transform:none!important;transition:color .25s,transform .3s cubic-bezier(.3,1.6,.5,1)!important}
+#nbar.lg .nb-it.on{color:var(--accent)}
+#nbar.lg .nb-it.on svg{transform:scale(1.08)!important}
+#nbar.lg .nb-it:active svg{transform:scale(.9)!important}
+#nbar.lg .lg-plus.on .nb-it{color:var(--accent)}
+:root[data-dark] #nbar.lg .lg-bar,:root[data-dark] #nbar.lg .lg-plus{background:linear-gradient(180deg,rgba(60,62,70,.55),rgba(30,32,38,.45));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22),inset 0 0 0 .5px rgba(255,255,255,.14),0 12px 32px -8px rgba(0,0,0,.6)}
+:root[data-dark] #nbar.lg .lg-bar::before,:root[data-dark] #nbar.lg .lg-plus::before{background:radial-gradient(120% 70% at 30% -10%,rgba(255,255,255,.18),transparent 55%)}
+:root[data-dark] #nbar.lg .lg-lens{background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.09));box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
+:root[data-dark] #nbar.lg .nb-it{color:#F2F2F4}
+:root[data-dark] #nbar.lg .nb-it.on,:root[data-dark] #nbar.lg .lg-plus.on .nb-it{color:#E6FF00}
+html.has-nb body{padding-bottom:calc(76px + env(safe-area-inset-bottom))!important}
+html.has-nb #homeNext .hn-row{padding:4px 0}
 </style></head><body>
 <div id="intro" aria-hidden="true"><div class="in-bg"></div><div class="in-shade"></div>
 <svg class="in-prof" viewBox="0 0 390 120" preserveAspectRatio="none"><path d="M0 104 L28 96 L52 100 L80 74 L104 82 L132 46 L150 58 L176 30 L198 44 L222 18 L246 40 L270 34 L296 64 L318 56 L344 84 L366 78 L390 92"/></svg>
@@ -7582,6 +7616,41 @@ function pkOpen(day){
   document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest(SEL))e.preventDefault()});
   document.addEventListener("keydown",e=>{if(e.key==="Escape")pkClose()});
 })();
+
+
+/* ================= Barre d'onglets « liquid glass » ================= */
+let lgIdx=-1;
+function lgBuild(){const nb=$("nbar");if(!nb||nb.classList.contains("lg"))return;
+  nb.classList.add("lg");const row=nb.querySelector(".nb-row");
+  const bar=document.createElement("div");bar.className="lg-bar";const lens=document.createElement("span");lens.className="lg-lens";lens.setAttribute("aria-hidden","true");bar.append(lens);
+  [...row.querySelectorAll(".nb-it")].forEach(b=>{if(b.dataset.nb==="plus")return;bar.append(b)});
+  const plus=row.querySelector('[data-nb="plus"]');const pw=document.createElement("div");pw.className="lg-plus";if(plus)pw.append(plus);
+  row.append(bar,pw);
+  ["pointerdown"].forEach(ev=>bar.addEventListener(ev,()=>bar.classList.add("press"),{passive:true}));
+  ["pointerup","pointercancel","pointerleave"].forEach(ev=>bar.addEventListener(ev,()=>bar.classList.remove("press"),{passive:true}));
+  addEventListener("resize",()=>lgMove(nbCur||nbCurrent(),true))}
+function lgMove(k,instant){const nb=$("nbar");if(!nb||!nb.classList.contains("lg"))return;
+  const bar=nb.querySelector(".lg-bar"),lens=bar&&bar.querySelector(".lg-lens");if(!lens)return;
+  const btns=[...bar.querySelectorAll(".nb-it")],i=btns.findIndex(b=>b.dataset.nb===k);
+  nb.querySelector(".lg-plus").classList.toggle("on",k==="plus");
+  if(i<0){lens.style.opacity="0";return}lens.style.opacity="1";
+  const b=btns[i],x=b.offsetLeft,w=b.offsetWidth;lens.style.width=w+"px";
+  const to=`translateX(${x}px)`;
+  if(instant||lgIdx<0||!lens.animate||matchMedia("(prefers-reduced-motion: reduce)").matches){lens.style.transform=to;lgIdx=i;return}
+  if(i===lgIdx){lens.style.transform=to;return}
+  const from=lens.style.transform||to,dist=Math.abs(i-lgIdx);lgIdx=i;
+  // la lentille s'étire pendant le trajet puis reprend sa forme, comme une goutte
+  lens.animate([{transform:from+" scale(1,1)"},{transform:`translateX(${(parseFloat(from.slice(11))+x)/2}px) scale(${1+0.18*dist},0.86)`,offset:.45},{transform:to+" scale(.96,1.04)",offset:.8},{transform:to+" scale(1,1)"}],{duration:520+70*dist,easing:"cubic-bezier(.3,.7,.2,1)"});
+  lens.style.transform=to}
+{const _s=nbSet;nbSet=function(k,instant){_s(k,instant);safe("verre",()=>lgMove(k,instant))}}
+/* transition entre les pages : glissement dans le sens de l'onglet choisi */
+const LG_ORD=["accueil","semaine","saison","courses","nutrition","reglages"];let lgPage=null;
+function lgSlide(){const k=LG_ORD.find(t=>$("p-"+t)&&!$("p-"+t).hidden);if(!k||k===lgPage)return;
+  const dir=lgPage==null?0:(LG_ORD.indexOf(k)>LG_ORD.indexOf(lgPage)?1:-1);lgPage=k;
+  const el=$("p-"+k);if(!dir||!el.animate||matchMedia("(prefers-reduced-motion: reduce)").matches)return;
+  el.animate([{opacity:0,transform:`translateX(${dir*28}px) scale(.985)`,filter:"blur(3px)"},{opacity:1,transform:"none",filter:"blur(0)"}],{duration:340,easing:"cubic-bezier(.2,.8,.2,1)"})}
+safe("verre",()=>{lgBuild();lgMove(nbCurrent(),true);lgPage=LG_ORD.find(t=>$("p-"+t)&&!$("p-"+t).hidden)||null;
+  const mo=new MutationObserver(()=>lgSlide());document.querySelectorAll('section[id^="p-"]').forEach(s=>mo.observe(s,{attributes:true,attributeFilter:["hidden"]}))});
 
 </script>
 </body></html>
