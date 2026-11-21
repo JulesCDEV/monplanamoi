@@ -1923,6 +1923,34 @@ html body{background:transparent!important}
 body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 62%,transparent) 0%,color-mix(in srgb,var(--bg) 80%,transparent) 38%,color-mix(in srgb,var(--bg) 88%,transparent) 100%),var(--app-photo) center 40%/cover no-repeat}
 .topbar{background:color-mix(in srgb,var(--bg) 70%,transparent)!important;-webkit-backdrop-filter:blur(14px) saturate(1.2);backdrop-filter:blur(14px) saturate(1.2)}
+/* ================= Aperçu par appui long ================= */
+#days li.day,#homeNext .hn-row,#todayCard{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .18s ease}
+.lp-press{transform:scale(.97)}
+#peekOv{position:fixed;inset:0;z-index:150;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 18px;
+  background:color-mix(in srgb,var(--bg) 35%,rgba(0,0,0,.35));-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);opacity:0;transition:opacity .2s ease}
+#peekOv.in{opacity:1}#peekOv.out{opacity:0}
+#peekOv .pk-card{width:100%;max-width:400px;max-height:78vh;overflow:auto;background:var(--surface,var(--card,#fff));color:var(--fg);border-radius:22px;padding:18px 18px 14px;
+  box-shadow:0 24px 60px -12px rgba(0,0,0,.45);transform:scale(.88) translateY(10px);transition:transform .32s cubic-bezier(.2,1.3,.4,1)}
+#peekOv.in .pk-card{transform:none}#peekOv.out .pk-card{transform:scale(.94);transition-duration:.18s}
+.pk-lab{font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:6px}
+.pk-hd{display:flex;align-items:center;gap:10px}
+.pk-ic{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--fg) 7%,transparent);flex:none}
+.pk-ic svg{width:21px;height:21px}
+.pk-t{font:italic 900 21px/1.1 var(--display,system-ui);text-transform:uppercase;letter-spacing:-.01em}
+.pk-sub{margin:8px 0 0;font-size:14px;color:var(--muted);line-height:1.35}
+.pk-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.pk-chips span{padding:5px 10px;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,transparent);color:var(--accent);font-weight:700;font-size:13px}
+.pk-bar{display:flex;align-items:flex-end;gap:2px;margin-top:14px;height:46px}
+.pk-bar i{display:block;border-radius:4px 4px 2px 2px;min-width:3px}
+.pk-watch{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.pk-why{margin:12px 0 0;font-size:14.5px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.pk-steps{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.pk-steps li{font-size:13.5px;padding-left:14px;position:relative;color:var(--muted)}
+.pk-steps li::before{content:"";position:absolute;left:2px;top:7px;width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.pk-steps li b{color:var(--fg);font-weight:600}
+.pk-go{margin-top:14px;width:100%;padding:12px;border:0;border-radius:14px;background:var(--accent);color:#fff;font:700 15px var(--body,system-ui)}
+.pk-hint{margin:12px 0 0;font-size:12px;color:#fff;opacity:.8;text-shadow:0 1px 4px rgba(0,0,0,.4)}
+:root[data-dark] .pk-go{background:#E6FF00;color:#0B0B0C}
 </style></head><body>
 <div id="intro" aria-hidden="true"><div class="in-bg"></div><div class="in-shade"></div>
 <svg class="in-prof" viewBox="0 0 390 120" preserveAspectRatio="none"><path d="M0 104 L28 96 L52 100 L80 74 L104 82 L132 46 L150 58 L176 30 L198 44 L222 18 L246 40 L270 34 L296 64 L318 56 L344 84 L366 78 L390 92"/></svg>
@@ -4661,7 +4689,7 @@ function tapisDetail(txt){
   if(m){steps.push({h:m[1]+" blocs de "+m[2]+" min en montée à "+m[3]+" %",t:"Règle la pente à "+m[3]+" % et la vitesse vers 5 à 6 km/h : marche vite, à grandes enjambées, comme dans une vraie côte. Effort 5 à 6/10. Entre chaque bloc, 2 minutes à plat et lentement pour récupérer."});}
   else if(/(\d+)'\s*à\s*(\d+)\s*%/.test(txt)){const k=txt.match(/(\d+)'\s*à\s*(\d+)\s*%/);steps.push({h:k[1]+" min en montée à "+k[2]+" %",t:"Marche tranquille en montée, effort 3 à 4/10."});}
   if(stepper)steps.push({h:"Stepper · "+stepper[1]+" min",t:"Rythme régulier, sans t'appuyer sur les poignées. C'est l'équivalent d'un escalier : idéal pour les quadriceps et les mollets."});
-  steps.push({h:"Retour au calme · 5 min",t:"À plat, marche lente, puis étirements des mollets."});
+  steps.push({h:"Retour au calme · 10 min",t:"À plat, marche lente, puis étirements des mollets."});
   return {why:"C'est ta séance de D+ de la semaine, sans impact. Monter en marchant vite est exactement le geste que tu feras dans les côtes raides en trail, où presque tout le monde marche. Sur tapis, 1 km parcouru à 15 % = 150 m de D+.",
     steps,tips:["Ne t'accroche pas aux barres : ça fausse l'effort et la posture. Mains libres, buste légèrement penché en avant.","Si le tapis ne monte qu'à 12 %, garde 12 % et rallonge un peu les blocs.","Tes mollets vont chauffer les premières semaines : c'est normal."]};
 }
@@ -7504,5 +7532,56 @@ function bgKind(){try{const rs=(ST.races||[]).map(r=>({...r,d:D(r.date)})).filte
 function bgApply(){document.documentElement.classList.toggle("bg-road",bgKind()==="road")}
 {const _ra=renderAll;renderAll=function(){_ra();safe("fond",bgApply)}}
 safe("fond",bgApply);
+
+/* ================= Aperçu par appui long (comme un aperçu de tweet) ================= */
+const PK_Z={1:"#9DB3FF",2:"#5C78FF",3:"#1F4BFF",4:"#F2A900",5:"#FF5A36"};
+function pkDayOf(el){
+  const li=el.closest("#days li.day");if(li){const i=[...li.parentNode.children].indexOf(li);return PLAN.weeks[week]&&PLAN.weeks[week].days[i]}
+  const hr=el.closest("#homeNext .hn-row");if(hr){const i=[...hr.parentNode.querySelectorAll(".hn-row")].indexOf(hr);
+    return PLAN.weeks.flatMap(w=>w.days).filter(d=>dayDiff(d.date,today)>0&&NOREST(d)&&d.kind!=="opt")[i]}
+  if(el.closest("#todayCard")){const w=PLAN.weeks[weekIndexOf(today)];return w&&w.days.find(d=>dayDiff(d.date,today)===0)}
+  return null}
+function pkFlat(w){const out=[];(w.steps||[]).forEach(s=>{if(s.rep)for(let r=0;r<s.rep;r++)(s.steps||[]).forEach(x=>out.push(x));else out.push(s)});return out}
+function pkClose(){const o=$("peekOv");if(!o||o.classList.contains("out"))return;o.classList.add("out");setTimeout(()=>o.remove(),220)}
+function pkOpen(day){
+  pkClose();const old=$("peekOv");if(old)old.remove();
+  const x=sessionDetail(day),ov=document.createElement("div");ov.id="peekOv";ov.setAttribute("role","dialog");ov.setAttribute("aria-label","Aperçu de la séance");
+  const c=document.createElement("div");c.className="pk-card tone-"+tone(day);
+  const lab=document.createElement("div");lab.className="pk-lab";const dt=day.date.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});lab.textContent=dt.charAt(0).toUpperCase()+dt.slice(1);
+  const hd=document.createElement("div");hd.className="pk-hd";const ic=document.createElement("span");ic.className="pk-ic";if(typeof setIco==="function")setIco(ic,dayEmo(day));
+  const tt=document.createElement("b");tt.className="pk-t";tt.textContent=x.title||day.txt;hd.append(ic,tt);
+  c.append(lab,hd);
+  if(x.title&&day.txt&&x.title!==day.txt){const sub=document.createElement("p");sub.className="pk-sub";sub.textContent=day.txt;c.append(sub)}
+  const chips=document.createElement("div");chips.className="pk-chips";const chip=t=>{const s=document.createElement("span");s.className="num";s.textContent=t;chips.append(s)};
+  let w=null;try{w=typeof wkt==="function"?wkt(day):null}catch(e){}
+  const fl=w?pkFlat(w).filter(s=>s.min):[];
+  const m=fl.length?fl.reduce((a,s)=>a+s.min,0):(typeof pdur==="function"?pdur(day.txt||""):0);
+  if(day.km)chip(fmtKm(day.km)+" km");if(day.dp)chip(fmt(day.dp)+" m D+");if(m)chip((m>=60?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):m+" min"));
+  if(chips.children.length)c.append(chips);
+  if(fl.length>1){const tot=fl.reduce((a,s)=>a+s.min,0),bar=document.createElement("div");bar.className="pk-bar";
+    fl.forEach(s=>{const i=document.createElement("i");i.style.flex=String(s.min);i.style.height=(10+(s.z||1)*7)+"px";i.style.background=PK_Z[s.z]||PK_Z[2];i.title=s.name+" · "+s.min+" min";bar.append(i)});
+    c.append(bar);const lg=document.createElement("p");lg.className="pk-watch";lg.textContent=wktSummary(w);c.append(lg)}
+  if(x.why){const p=document.createElement("p");p.className="pk-why";p.textContent=x.why;c.append(p)}
+  if(x.steps&&x.steps.length){const ul=document.createElement("ul");ul.className="pk-steps";x.steps.slice(0,4).forEach(s=>{const li=document.createElement("li");const b=document.createElement("b");b.textContent=s.h;li.append(b);ul.append(li)});
+    if(x.steps.length>4){const li=document.createElement("li");li.textContent="+ "+(x.steps.length-4)+" étapes";ul.append(li)}c.append(ul)}
+  const go=document.createElement("button");go.type="button";go.className="pk-go";go.textContent="Voir la séance";go.onclick=e=>{e.stopPropagation();pkClose();setTimeout(()=>openDetail(day),120)};c.append(go);
+  const hint=document.createElement("p");hint.className="pk-hint";hint.textContent="Touche à côté pour fermer";
+  ov.append(c,hint);ov.addEventListener("click",e=>{if(!c.contains(e.target))pkClose()});
+  document.body.append(ov);requestAnimationFrame(()=>ov.classList.add("in"))}
+(function(){let t=null,sx=0,sy=0,el=null,fired=false;
+  const SEL="#days li.day,#homeNext .hn-row,#todayCard";
+  const cancel=()=>{clearTimeout(t);t=null;if(el)el.classList.remove("lp-press");el=null};
+  document.addEventListener("pointerdown",e=>{const h=e.target.closest&&e.target.closest(SEL);if(!h||e.target.closest(".check,.donebtn,input,label"))return;
+    const day=pkDayOf(h);if(!day)return;fired=false;sx=e.clientX;sy=e.clientY;el=h;
+    setTimeout(()=>{if(el===h&&t)h.classList.add("lp-press")},120);
+    t=setTimeout(()=>{t=null;fired=true;h.classList.remove("lp-press");if(navigator.vibrate)navigator.vibrate(10);pkOpen(day);el=null},430)},{passive:true});
+  document.addEventListener("pointermove",e=>{if(t&&Math.hypot(e.clientX-sx,e.clientY-sy)>10)cancel()},{passive:true});
+  ["pointerup","pointercancel","scroll"].forEach(ev=>document.addEventListener(ev,()=>{if(t)cancel()},{passive:true,capture:true}));
+  // le clic qui suit un appui long n'ouvre pas la fiche
+  document.addEventListener("click",e=>{if(fired&&e.target.closest&&e.target.closest(SEL)){e.stopPropagation();e.preventDefault();fired=false}},true);
+  document.addEventListener("contextmenu",e=>{if(e.target.closest&&e.target.closest(SEL))e.preventDefault()});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")pkClose()});
+})();
+
 </script>
 </body></html>
