@@ -2655,7 +2655,7 @@ function generatePlan(st,todayDate){
     if(prevOffDays>=5){factor*=0.85;notes.push("Reprise après "+prevOffDays+" jours sans entraînement")}
     // charge cible
     const gKm=goal?+goal.km||20:prevBuild, gDp=goal?+goal.dp||0:0;
-    const P=goal?clamp(Math.max((0.55*gKm+30)*peakF,(+S.km0||0)*1.15),25,Math.max(100,(+S.km0||0)*1.3)):Math.max(prevBuild,+S.km0||25);
+    const P=goal?clamp(Math.max(((gKm>=40&&gKm<=45&&gDp/Math.max(1,gKm)<10)?0.9*gKm+25:0.55*gKm+30)*peakF,(+S.km0||0)*1.15),25,Math.max(100,(+S.km0||0)*1.3)):Math.max(prevBuild,+S.km0||25);
     const pbBefore=prevBuild,PA=(st.perf&&st.perf.week&&st.perf.week[ISO(ws)])||null;
     let km;
     if(phase==="Course")km=peakReached*0.35;
@@ -2721,7 +2721,7 @@ function generatePlan(st,todayDate){
     const rs=["long","run","run2"].filter(has), shK={long:.45,run:.22,run2:.18}, shD={long:.7,run:.1,run2:.2};
     const tk=rs.reduce((a,x)=>a+shK[x],0)||1, td=rs.reduce((a,x)=>a+shD[x],0)||1;
     const K={},Dp={};rs.forEach(x=>{K[x]=rest*shK[x]/tk;Dp[x]=restD*shD[x]/td});
-    let longCap=(recov?16:goal?Math.max(14,Math.min(gKm*0.65,40)):30)*longF;
+    let longCap=(recov?16:goal?Math.max(14,Math.min(gKm*((gKm>=40&&gKm<=45&&gDp/Math.max(1,gKm)<10)?0.76:0.65),40)):30)*longF;
     if(PA&&PA.longCap)longCap=Math.min(longCap,PA.longCap);
     let over=0;
     if(K.run>(recov?10:13)){over+=K.run-(recov?10:13);K.run=recov?10:13}
@@ -7545,8 +7545,8 @@ function rbWeek(w,wi){
   if(L<0||!F.length){if(L>=0&&hk>hk0){const ld=D[L].dp;D[L]=rbScale(D[L],Math.max(8,D[L].km-(hk-hk0)));D[L].dp=ld}sum();return}
   const R=Math.max(0,tot-hk);if(R<F.length*6+8){sum();return}
   const wt=j=>D[j].slot==="run2"?(/récup/i.test(D[j].txt)?0.7:0.85):1;
-  const sw=1.6+F.reduce((a,j)=>a+wt(j),0);
-  let kl=R*1.6/sw,over=0;const kf={};
+  const LW=w.goal&&+w.goal.km>=40&&+w.goal.km<=45&&(+w.goal.dp||0)/(+w.goal.km)<10?2.2:1.6;const sw=LW+F.reduce((a,j)=>a+wt(j),0);
+  let kl=R*LW/sw,over=0;const kf={};
   F.forEach(j=>{let k=R*wt(j)/sw;const cap=D[j].slot==="run2"?14:13;if(k>cap){over+=k-cap;k=cap}if(k<6){over-=6-k;k=6}kf[j]=k});
   kl=Math.max(0,kl+over);
   const mx=Math.max(...Object.values(kf));if(kl<mx*1.3){const need=mx*1.3-kl;{const sk=Object.values(kf).reduce((a,b)=>a+b,0);F.forEach(j=>kf[j]=Math.max(4,kf[j]-need*kf[j]/sk))}kl=mx*1.3}
@@ -7661,12 +7661,12 @@ function gfHard(d){if(!d||d.kind==="race"||d.kind==="pre")return false;const t=d
   if(d.kind==="gym")return /^Tapis/.test(t)&&!/léger|endurance/i.test(t);
   if(!["run","long","climb"].includes(d.kind))return false;
   if(/^Footing (endurance|récup)|^Sortie (longue|facile)|activation|déblocage/i.test(t)&&!/×|allure|seuil|vif|soutenu/i.test(t))return false;
-  return /fractionn|seuil|vma|×|allure course|côtes|fartlek|tempo|soutenu|vif|rapide|test/i.test(t)}
+  return /fractionn|seuil|vma|×|allure course|côtes|descente|fartlek|tempo|soutenu|vif|rapide|test/i.test(t)}
 function gfEasy(d,pace){const m=d.km>0?Math.round(d.km*pace):((typeof pdur==="function"&&pdur(d.txt||""))||40);
   return {...d,txt:"Footing endurance "+dur(Math.max(25,m)),gfSoft:true}}
 function gfPlan(P,st){
   const S=(st&&st.settings)||{},km0=+S.km0||25,pace=+S.pace||6.5;if(!P||!P.weeks)return;
-  const hist=[],longHist=[];let warned=false;
+  const hist=[],longHist=[];let warned=false,gfDescI=0;
   P.weeks.forEach((w,i)=>{const D=w.days;if(!D)return;w.notes=w.notes||[];
     const raceW=D.some(d=>d.kind==="race"),taper=["Affûtage","Course"].includes(w.phase);
     // 1) valeurs plausibles : km jamais négatifs, D+ au plus 120 m par km hors course
@@ -7693,11 +7693,26 @@ function gfPlan(P,st){
           w.notes.unshift("Volume limité à +15 % par rapport aux semaines précédentes")}}
     }
     if(!raceW&&w.phase!=="Course"){
+      const g0=w.goal,rG=g0&&+g0.km?(+g0.dp||0)/(+g0.km):0,trail0=g0?rG>=10:(S.sports&&S.sports.trail!==false);
+      // 5) sortie longue pas plus raide que la course (+15 %)
+      if(L>=0&&g0&&rG>=10){const o=D[L],mx=Math.round(o.km*rG*1.15);
+        if(o.dp>mx+50){const cut=o.dp-mx,mm=o.txt.match(/(?<![×\d])(\d+)h(\d{2})?|(?<![×\d])(\d+)'/);let txt=o.txt;
+          if(mm){const old=mm[4]?+mm[4]:(+mm[1])*60+(+mm[2]||0);txt=o.txt.replace(mm[0],dur(Math.max(30,old-cut*0.06)))}
+          D[L]={...o,dp:mx,txt}}}
+      // 6) une séance de descentes toutes les 2 semaines en Volume et Spécifique (objectif trail)
+      const testW=D.some(d=>/^Sortie test/.test(d.txt));
+      if(trail0&&["Volume","Spécifique"].includes(w.phase)&&!w.light&&!testW){gfDescI++;
+        if(gfDescI%2===1){const nearLong=j=>(D[j-1]&&D[j-1].kind==="long")||(D[j+1]&&D[j+1].kind==="long");
+          const ok=j=>D[j]&&D[j].km>0&&!D[j].vmaTest&&!/test|reprise|activation|^Option/i.test(D[j].txt)&&!nearLong(j);
+          let j=D.findIndex((d,k)=>d.slot==="run"&&d.kind==="run"&&ok(k));if(j<0)j=D.findIndex((d,k)=>d.slot==="hill"&&ok(k));
+          if(j>=0){const n=w.phase==="Spécifique"?8:6,km=Math.round(((30/pace)+n*0.6)*10)/10,dp=Math.max(D[j].dp,n*50);
+            D[j]={...D[j],kind:"run",txt:"Descentes : "+n+"×(montée 2' en marchant vite + descente rapide et relâchée)",km,dp,gfDesc:n};
+            w.notes.push("Séance de descentes cette semaine : elle prépare les cuisses aux longues descentes de la course")}}}
       // 4) pas deux séances intenses deux jours de suite
       const g=w.goal,trail=g?((+g.dp||0)/Math.max(1,+g.km||1)>=10):(S.sports&&S.sports.trail!==false);
       for(let j=1;j<7;j++){const a=D[j-1],b=D[j];if(!gfHard(a)||!gfHard(b))continue;
         // on garde la séance la plus utile pour l'objectif : le D+ pour un trail, la qualité sur route
-        const keepHill=trail;const isHill=x=>x.slot==="hill"||/^Tapis|côtes/i.test(x.txt);
+        const keepHill=trail;const isHill=x=>x.slot==="hill"||/^Tapis|côtes|^Descentes/i.test(x.txt);
         let soft=j;if(a.kind==="long")soft=j;else if(b.kind==="long")soft=j-1;
         else if(isHill(a)!==isHill(b))soft=(isHill(a)===keepHill)?j:j-1;
         const x=D[soft];if(x.kind==="gym"){D[soft]={...x,txt:x.txt.replace(/^Tapis : (\d+)×(\d+)' à (\d+) %/,(s,n,m,p)=>"Tapis endurance : "+(+n*+m)+"' de marche en montée à "+Math.max(6,+p-3)+" %"),gfSoft:true}}
@@ -7724,6 +7739,28 @@ function safeUrl(u,def){u=String(u||"").trim();if(/^https?:\/\//i.test(u))return
 (function(){const day0=ISO(new Date());const chk=()=>{if(document.visibilityState==="visible"&&ISO(new Date())!==day0)location.reload()};
   document.addEventListener("visibilitychange",chk);addEventListener("pageshow",chk);addEventListener("focus",chk);setInterval(chk,60000)})();
 safe("garde-fous",()=>{if(typeof PLAN==="undefined"||!PLAN)return;PLAN=null;regen();renderAll()});
+
+/* fiches et montre : descentes et tapis en endurance */
+{const _w=wkt;wkt=function(day){
+  if(day&&day.gfDesc){const n=day.gfDesc,S=(name,min,z,it)=>({name,min,z,it:it||"active"});
+    return {name:day.txt,date:day.date,slot:day.slot||day.kind,sport:"running",steps:[S("Échauffement",20,2,"warmup"),{rep:n,steps:[S("Montée en marchant vite",2,3),S("Descente rapide et relâchée",2,3,"recovery")]},S("Retour au calme",10,1,"cooldown")]}}
+  const m=day&&String(day.txt||"").match(/^Tapis endurance : (\d+)' de marche en montée à (\d+) %/);
+  if(m){const S=(name,min,z,it)=>({name,min,z,it:it||"active"});return {name:day.txt,date:day.date,slot:day.slot||day.kind,sport:"running",steps:[S("Échauffement à plat",10,2,"warmup"),S("Montée "+m[2]+" % en marchant",+m[1],2),S("Retour au calme",10,1,"cooldown")]}}
+  return _w(day)}}
+{const _sd=sessionDetail;sessionDetail=function(day){const d=_sd(day);if(!day)return d;
+  if(day.gfDesc){const n=day.gfDesc;return {...d,title:"Descentes : "+n+" répétitions",
+    why:"Les descentes cassent les cuisses : ce sont elles qui ralentissent le plus en fin de trail. Cette séance habitue les quadriceps à freiner (travail excentrique) et t'apprend à descendre vite en restant relâché.",
+    steps:[{h:"Échauffement · 20 min",t:"Footing facile jusqu'au pied d'une côte de 2 minutes, chemin ou sentier peu technique (pente 8 à 15 %)."},
+      {h:n+" × (montée 2' + descente)",t:"Monte en marchant vite (effort 6/10), puis redescends en courant : petits pas rapides, buste légèrement en avant, bras écartés pour l'équilibre. Vite mais toujours en contrôle."},
+      {h:"Retour au calme · 10 min",t:"Footing très lent sur le plat, puis étirements doux des quadriceps."}],
+    tips:["Les courbatures des 2 jours suivants sont normales les premières fois : elles diminuent de séance en séance.","Évite les descentes très techniques ou mouillées pour cette séance : le but est la vitesse, pas l'équilibre.","Garde les mêmes chaussures que pour la course."]}}
+  const m=String(day.txt||"").match(/^Tapis endurance : (\d+)' de marche en montée à (\d+) %/);
+  if(m)return {...d,title:"Tapis en endurance : "+m[1]+"' à "+m[2]+" %",
+    why:"Ta séance de D+ de la semaine, en version facile car tu as déjà une séance intense la veille ou le lendemain. Marcher vite en montée sans t'essouffler, c'est exactement ce que tu feras dans les côtes de la course.",
+    steps:[{h:"Échauffement · 10 min",t:"À plat, marche rapide puis trot léger."},{h:m[1]+" min en montée à "+m[2]+" %",t:"Marche active, mains sur les cuisses si besoin, sans t'accrocher aux poignées. Tu dois pouvoir parler (effort 4 à 5/10)."},{h:"Retour au calme · 10 min",t:"À plat, marche puis étirements des mollets."}],
+    tips:d.tips||[]};
+  return d}}
+
 
 </script>
 </body></html>
