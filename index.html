@@ -1985,6 +1985,7 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 :root[data-dark] #nbar.lg .nb-it.on,:root[data-dark] #nbar.lg .lg-plus.on .nb-it{color:#E6FF00}
 html.has-nb body{padding-bottom:calc(76px + env(safe-area-inset-bottom))!important}
 html.has-nb #homeNext .hn-row{padding:4px 0}
+.wrap{overflow-x:clip}
 </style></head><body>
 <div id="intro" aria-hidden="true"><div class="in-bg"></div><div class="in-shade"></div>
 <svg class="in-prof" viewBox="0 0 390 120" preserveAspectRatio="none"><path d="M0 104 L28 96 L52 100 L80 74 L104 82 L132 46 L150 58 L176 30 L198 44 L222 18 L246 40 L270 34 L296 64 L318 56 L344 84 L366 78 L390 92"/></svg>
@@ -2654,13 +2655,13 @@ function generatePlan(st,todayDate){
     if(prevOffDays>=5){factor*=0.85;notes.push("Reprise après "+prevOffDays+" jours sans entraînement")}
     // charge cible
     const gKm=goal?+goal.km||20:prevBuild, gDp=goal?+goal.dp||0:0;
-    const P=goal?clamp((0.55*gKm+30)*peakF,25,100):Math.max(prevBuild,+S.km0||25);
+    const P=goal?clamp(Math.max((0.55*gKm+30)*peakF,(+S.km0||0)*1.15),25,Math.max(100,(+S.km0||0)*1.3)):Math.max(prevBuild,+S.km0||25);
     const pbBefore=prevBuild,PA=(st.perf&&st.perf.week&&st.perf.week[ISO(ws)])||null;
     let km;
     if(phase==="Course")km=peakReached*0.35;
     else if(phase==="Affûtage")km=peakReached*(goal.prio!=="A"?0.75:wTo===2?0.7:0.5);
     else if(light)km=prevBuild*0.72;
-    else if(building){km=Math.min(phase==="Base"&&goal?P*0.7:P,prevBuild*(phase==="Spécifique"?Math.min(1.04,ramp):ramp));if(i===0)km=prevBuild;prevBuild=km;peakReached=Math.max(peakReached,km)}
+    else if(building){km=Math.min(phase==="Base"&&goal?Math.max(P*0.7,Math.min(P,(+S.km0||0)*0.95)):P,prevBuild*(phase==="Spécifique"?Math.min(1.04,ramp):ramp));if(i===0)km=prevBuild;prevBuild=km;peakReached=Math.max(peakReached,km)}
     else km=prevBuild;
     if(repriseA)km=peakReached*(repriseA===1?0.35:0.55);
     else km*=factor;
@@ -3412,7 +3413,7 @@ function renderRaceList(ol,editable){
     const gl=document.createElement("small");gl.className="goal";gl.textContent=r.tmin?"Objectif : "+hms(+r.tmin)+" ("+goalPace(r,+r.tmin)+")":"Objectif : finir";
     {const lv=!past&&typeof prLevel==="function"?prLevel(ST,today):null,pt=lv&&prPredict(lv,r.km,r.dp);if(pt)gl.textContent+=" · temps estimé "+hms(Math.round(pt))}if(past)gl.hidden=true;
     m.append(nm,sub,gl);if(r.note){const no=document.createElement("small");no.textContent=r.note;m.append(no)}
-    if(r.url&&/^https?:\/\//i.test(r.url)){const a=document.createElement("a");a.href=r.url;a.target="_blank";a.rel="noopener";a.className="rlink";a.textContent="Site de la course ›";m.append(a)}
+    if(r.url&&/^https?:\/\//i.test(r.url)){const a=document.createElement("a");a.href=safeUrl(r.url);a.target="_blank";a.rel="noopener";a.className="rlink";a.textContent="Site de la course ›";m.append(a)}
     li.append(p,m);
     if(editable){
       const act=document.createElement("div");act.className="ract";
@@ -3457,7 +3458,7 @@ $("raceCancel").onclick=()=>{$("raceForm").hidden=true;editing=null};
 $("raceForm").addEventListener("submit",e=>{
   e.preventDefault();
   const r={id:editing||uid(),name:$("rName").value.trim(),date:$("rDate").value,km:+$("rKm").value,dp:+$("rDp").value||0,
-    prio:(document.querySelector('input[name="rPrio"]:checked')||{}).value||"C",note:$("rNote").value.trim(),url:$("rUrl").value.trim()};
+    prio:(document.querySelector('input[name="rPrio"]:checked')||{}).value||"C",note:$("rNote").value.trim(),url:safeUrl($("rUrl").value.trim(),"")};
   const gsel=(document.querySelector('input[name="rGoal"]:checked')||{}).value,tt=parseTime($("rTime").value);
   if(gsel==="time"){if(!tt){toast("Indique le temps visé, par exemple 12:30, ou choisis « Finir ».");return}r.tmin=Math.round(tt*100)/100}
   {const old=ST.races.find(x=>x.id===r.id);if(old){["gpx","aids","gph"].forEach(k=>{if(old[k]!==undefined)r[k]=old[k]})}}
@@ -4313,7 +4314,7 @@ function planCard(r){
   cc("Objectif",P.gph+" g/h");cc("Couvert",P.gph?Math.round(avgC)+" g/h":"–");cc("Glucides prévus",fmt(P.tot)+" g");
   if(P.gph&&nut().products.length)ch.lastChild.previousSibling.className=P.deficit>P.gph*0.25?"warn":"ok";
   card.append(ch);
-  if(r.url&&/^https?:\/\//i.test(r.url)){const a=document.createElement("a");a.href=r.url;a.target="_blank";a.rel="noopener";a.className="rlink";a.textContent="Site de la course ›";card.append(a)}
+  if(r.url&&/^https?:\/\//i.test(r.url)){const a=document.createElement("a");a.href=safeUrl(r.url);a.target="_blank";a.rel="noopener";a.className="rlink";a.textContent="Site de la course ›";card.append(a)}
   // réglages de la course
   const g=document.createElement("div");g.className="grid2";
   const f1=document.createElement("label");f1.textContent="Temps visé (vide = finir)";const i1=document.createElement("input");i1.type="text";i1.inputMode="numeric";i1.id="nt-"+r.id;i1.placeholder=hm(estMin({...r,tmin:null}))+" (estimé)";i1.value=r.tmin?hm(r.tmin):"";
@@ -5508,7 +5509,7 @@ function checklistCard(r,P){
   inp.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();add.click()}};
   const rs=document.createElement("button");rs.type="button";rs.textContent="Tout décocher";rs.onclick=()=>{Object.keys(C).filter(k=>k!=="_custom").forEach(k=>delete C[k]);save();card.replaceWith(checklistCard(r,P))};
   row.append(inp,add,rs);card.append(row);
-  if(r.url&&/^https?:/i.test(r.url)){const a=document.createElement("a");a.href=r.url;a.target="_blank";a.rel="noopener";a.className="rlink";a.textContent="Règlement et infos sur le site de la course ›";card.append(a)}
+  if(r.url&&/^https?:/i.test(r.url)){const a=document.createElement("a");a.href=safeUrl(r.url);a.target="_blank";a.rel="noopener";a.className="rlink";a.textContent="Règlement et infos sur le site de la course ›";card.append(a)}
   return card;
 }
 function checkProgress(r){const S=checkItems(r,planRace(r)),C=(ST.check||{})[r.id]||{};const tot=S.reduce((a,s)=>a+s.items.length,0);return [S.reduce((a,s)=>a+s.items.filter(i=>C[i.k]).length,0),tot]}
@@ -7542,13 +7543,13 @@ function rbWeek(w,wi){
   if(H>=0){const t=/^Tapis/.test(D[H].txt)?rbTapis(D[H],w,wi):null;if(t)D[H]=t;hk=D[H].km||0}
   const sum=()=>{w.pk=D.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:d.km),0);w.pd=D.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:d.dp),0)};
   if(L<0||!F.length){if(L>=0&&hk>hk0){const ld=D[L].dp;D[L]=rbScale(D[L],Math.max(8,D[L].km-(hk-hk0)));D[L].dp=ld}sum();return}
-  const R=Math.max(0,tot-hk);
+  const R=Math.max(0,tot-hk);if(R<F.length*6+8){sum();return}
   const wt=j=>D[j].slot==="run2"?(/récup/i.test(D[j].txt)?0.7:0.85):1;
   const sw=1.6+F.reduce((a,j)=>a+wt(j),0);
   let kl=R*1.6/sw,over=0;const kf={};
   F.forEach(j=>{let k=R*wt(j)/sw;const cap=D[j].slot==="run2"?14:13;if(k>cap){over+=k-cap;k=cap}if(k<6){over-=6-k;k=6}kf[j]=k});
   kl=Math.max(0,kl+over);
-  const mx=Math.max(...Object.values(kf));if(kl<mx*1.3){const need=mx*1.3-kl;F.forEach(j=>kf[j]-=need*kf[j]/Object.values(kf).reduce((a,b)=>a+b,0));kl=mx*1.3}
+  const mx=Math.max(...Object.values(kf));if(kl<mx*1.3){const need=mx*1.3-kl;{const sk=Object.values(kf).reduce((a,b)=>a+b,0);F.forEach(j=>kf[j]=Math.max(4,kf[j]-need*kf[j]/sk))}kl=mx*1.3}
   const lk=D[L].km||kl,ld=D[L].dp||0;
   D[L]=rbScale(D[L],kl);
   // le D+ de la sortie longue ne baisse pas : c'est la séance trail de la semaine
@@ -7651,6 +7652,78 @@ function lgSlide(){const k=LG_ORD.find(t=>$("p-"+t)&&!$("p-"+t).hidden);if(!k||k
   el.animate([{opacity:0,transform:`translateX(${dir*28}px) scale(.985)`,filter:"blur(3px)"},{opacity:1,transform:"none",filter:"blur(0)"}],{duration:340,easing:"cubic-bezier(.2,.8,.2,1)"})}
 safe("verre",()=>{lgBuild();lgMove(nbCurrent(),true);lgPage=LG_ORD.find(t=>$("p-"+t)&&!$("p-"+t).hidden)||null;
   const mo=new MutationObserver(()=>lgSlide());document.querySelectorAll('section[id^="p-"]').forEach(s=>mo.observe(s,{attributes:true,attributeFilter:["hidden"]}))});
+
+
+/* ================= Garde-fous du plan (audit) =================
+   Appliqués après la génération : pas de saut de volume, sortie longue qui progresse par paliers,
+   D+ plausible, pas deux séances intenses deux jours de suite. */
+function gfHard(d){if(!d||d.kind==="race"||d.kind==="pre")return false;const t=d.txt||"";
+  if(d.kind==="gym")return /^Tapis/.test(t)&&!/léger|endurance/i.test(t);
+  if(!["run","long","climb"].includes(d.kind))return false;
+  if(/^Footing (endurance|récup)|^Sortie (longue|facile)|activation|déblocage/i.test(t)&&!/×|allure|seuil|vif|soutenu/i.test(t))return false;
+  return /fractionn|seuil|vma|×|allure course|côtes|fartlek|tempo|soutenu|vif|rapide|test/i.test(t)}
+function gfEasy(d,pace){const m=d.km>0?Math.round(d.km*pace):((typeof pdur==="function"&&pdur(d.txt||""))||40);
+  return {...d,txt:"Footing endurance "+dur(Math.max(25,m)),gfSoft:true}}
+function gfPlan(P,st){
+  const S=(st&&st.settings)||{},km0=+S.km0||25,pace=+S.pace||6.5;if(!P||!P.weeks)return;
+  const hist=[],longHist=[];let warned=false;
+  P.weeks.forEach((w,i)=>{const D=w.days;if(!D)return;w.notes=w.notes||[];
+    const raceW=D.some(d=>d.kind==="race"),taper=["Affûtage","Course"].includes(w.phase);
+    // 1) valeurs plausibles : km jamais négatifs, D+ au plus 120 m par km hors course
+    D.forEach((d,j)=>{let x=d;if(!(x.km>=0))x={...x,km:0};if(!(x.dp>=0))x={...x,dp:0};
+      if(x.kind!=="race"&&x.km>0&&x.dp>x.km*120)x={...x,dp:Math.round(x.km*120)};if(x!==d)D[j]=x});
+    const L=D.findIndex(d=>d.kind==="long");
+    if(!raceW&&!taper){
+      // 2) sortie longue : au plus +25 % (+2 km) par rapport aux 3 dernières
+      const refL=longHist.length?Math.max(...longHist.slice(-3)):Math.max(10,km0*0.5);
+      if(L>=0){const cap=refL*1.25+2,o=D[L];
+        if(o.km>cap+0.5){const test=/^Sortie test/.test(o.txt);let n;
+          if(test){const k=cap,dp=Math.round(o.dp*k/o.km),m=k*pace+dp*0.06;
+            n={...o,km:k,dp,txt:(k>=o.km*0.75?"Sortie test "+Math.round(k)+" km sur terrain de course, ravitos < 5'":(/trail/i.test(o.txt)||dp/k>=10?"Sortie longue trail ":"Sortie longue ")+dur(m)+" sur terrain proche de la course")}}
+          else n=rbScale(o,cap);
+          D[L]=n;w.notes.unshift("Sortie longue plafonnée à "+fmtKm(cap)+" km : elle progresse par paliers de 25 % au plus")}}
+      // 3) volume de la semaine : au plus +15 % par rapport aux 2 semaines précédentes
+      const prev=hist.slice(-2),ref=i===0?km0:(prev.length?Math.max(...prev):0);
+      const tot=()=>D.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:(+d.km||0)),0);
+      if(ref>=12){const cap=ref*1.15+1;let ex=tot()-cap;
+        if(ex>0.5){// on retire d'abord sur la sortie longue (sans descendre sous 60 % de sa valeur), puis sur les footings
+          if(L>=0){const o=D[L],cut=Math.min(ex,o.km*0.4);if(cut>0.3){D[L]=rbScale(o,o.km-cut);ex-=cut}}
+          if(ex>0.5){const F=D.map((d,j)=>j).filter(j=>D[j].kind==="run"&&D[j].km>0&&!gfHard(D[j]));const s=F.reduce((a,j)=>a+D[j].km,0);
+            if(s>0)F.forEach(j=>{D[j]=rbScale(D[j],Math.max(3,D[j].km-ex*D[j].km/s))})}
+          w.notes.unshift("Volume limité à +15 % par rapport aux semaines précédentes")}}
+    }
+    if(!raceW&&w.phase!=="Course"){
+      // 4) pas deux séances intenses deux jours de suite
+      const g=w.goal,trail=g?((+g.dp||0)/Math.max(1,+g.km||1)>=10):(S.sports&&S.sports.trail!==false);
+      for(let j=1;j<7;j++){const a=D[j-1],b=D[j];if(!gfHard(a)||!gfHard(b))continue;
+        // on garde la séance la plus utile pour l'objectif : le D+ pour un trail, la qualité sur route
+        const keepHill=trail;const isHill=x=>x.slot==="hill"||/^Tapis|côtes/i.test(x.txt);
+        let soft=j;if(a.kind==="long")soft=j;else if(b.kind==="long")soft=j-1;
+        else if(isHill(a)!==isHill(b))soft=(isHill(a)===keepHill)?j:j-1;
+        const x=D[soft];if(x.kind==="gym"){D[soft]={...x,txt:x.txt.replace(/^Tapis : (\d+)×(\d+)' à (\d+) %/,(s,n,m,p)=>"Tapis endurance : "+(+n*+m)+"' de marche en montée à "+Math.max(6,+p-3)+" %"),gfSoft:true}}
+        else D[soft]=gfEasy(x,pace);
+        w.notes.push("Deux séances intenses d'affilée évitées : celle du "+["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"][soft]+" devient facile");j++}
+    }
+    w.pk=D.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:d.km),0);
+    w.pd=D.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:d.dp),0);
+    if(!raceW){hist.push(w.pk);if(L>=0)longHist.push(D[L].km)}
+  });
+  // délai trop court pour l'objectif
+  const g=(st.races||[]).map(r=>({...r,d:D_(r.date)})).filter(r=>r.prio==="A"&&r.d>=today).sort((a,b)=>a.d-b.d)[0];
+  if(g){const wks=Math.round(dayDiff(g.d,today)/7),need=(+g.km||0)>=60?20:(+g.km||0)>=30?14:(+g.km||0)>=15?10:6;
+    if(wks<need&&(+g.km||0)>km0*1.2){P.adapt=P.adapt||[];P.adapt.unshift(g.name+" : "+wks+" semaine"+(wks>1?"s":"")+" de préparation, c'est court pour "+fmtKm(+g.km)+" km (compte plutôt "+need+" semaines depuis ton niveau actuel). Le plan limite la progression pour éviter la blessure : vise de finir, en marchant dans les montées")}}
+}
+function D_(s){return typeof D==="function"?D(s):new Date(s)}
+{const _gp=generatePlan;generatePlan=function(st,t){const P=_gp(st,t);try{gfPlan(P,st)}catch(e){console.error("garde-fous",e)}return P}}
+/* totaux de semaine toujours égaux à la somme des séances, même après les ajustements (test VMA, maladie, séances imprévues…) */
+function gfTotals(){if(!PLAN||!PLAN.weeks)return;PLAN.weeks.forEach(w=>{w.pk=w.days.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:(+d.km||0)),0);w.pd=w.days.reduce((a,d)=>a+(["opt","off"].includes(d.kind)?0:(+d.dp||0)),0)})}
+{const _aa=applyAdj;applyAdj=function(){const r=_aa.apply(this,arguments);safe("totaux",gfTotals);return r}}
+/* liens externes : seulement http(s) */
+function safeUrl(u,def){u=String(u||"").trim();if(/^https?:\/\//i.test(u))return u;if(/^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i.test(u))return "https://"+u;return def===undefined?"#":def}
+/* l'app reste ouverte toute la nuit : au réveil, on recharge pour repartir du bon jour */
+(function(){const day0=ISO(new Date());const chk=()=>{if(document.visibilityState==="visible"&&ISO(new Date())!==day0)location.reload()};
+  document.addEventListener("visibilitychange",chk);addEventListener("pageshow",chk);addEventListener("focus",chk);setInterval(chk,60000)})();
+safe("garde-fous",()=>{if(typeof PLAN==="undefined"||!PLAN)return;PLAN=null;regen();renderAll()});
 
 </script>
 </body></html>
